@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { mutationOptions, queryOptions } from '@tanstack/react-query'
 import { notFound } from '@tanstack/react-router'
 import { isHTTPError } from 'ky'
 import { z } from 'zod/mini'
@@ -40,7 +40,8 @@ const recipeSummarySchema = z.object({
   name: z.string(),
   // Not z.url(): it rejects a relative path, which <img> loads fine
   image: z.string(),
-  rating: z.number(),
+  // A recipe this app created has no rating yet
+  rating: z._default(z.number(), 0),
   prepTimeMinutes: z.number(),
   cookTimeMinutes: z.number(),
   tags: z.array(z.string()),
@@ -52,15 +53,24 @@ const recipeListSchema = z.object({
   total: z.number(),
 })
 
+export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
+
 const recipeSchema = z.extend(recipeSummarySchema, {
   ingredients: z.array(z.string()),
   instructions: z.array(z.string()),
   servings: z.number(),
-  difficulty: z.catch(z.enum(['Easy', 'Medium', 'Hard', 'unknown']), 'unknown'),
+  difficulty: z.catch(z.enum([...DIFFICULTIES, 'unknown']), 'unknown'),
   cuisine: z.string(),
   caloriesPerServing: z.number(),
-  reviewCount: z.number(),
+  reviewCount: z._default(z.number(), 0),
 })
+
+export type Recipe = z.infer<typeof recipeSchema>
+
+// What the forms send: the API sets id, rating and reviews
+export type RecipeInput = Omit<Recipe, 'id' | 'rating' | 'reviewCount' | 'difficulty'> & {
+  difficulty: (typeof DIFFICULTIES)[number]
+}
 
 export function recipeTagsQueryOptions() {
   return queryOptions({
@@ -131,6 +141,30 @@ export function recipeQueryOptions(recipeId: string) {
         if (isHTTPError(error) && error.response.status === 404) throw notFound()
         throw error
       }
+    },
+  })
+}
+
+export function recipeCreateMutationOptions() {
+  return mutationOptions({
+    mutationFn: (recipe: RecipeInput) =>
+      api.post('recipes/add', { json: recipe }).json(recipeSchema),
+    onSuccess: (recipe, _recipe, _onMutateResult, { client }) => {
+      // DummyJSON stores no writes: the new id answers 404, so its page reads the response
+      client.setQueryData(recipeQueryOptions(String(recipe.id)).queryKey, recipe)
+      return client.invalidateQueries({ queryKey: ['recipes', 'list'] })
+    },
+  })
+}
+
+export function recipeUpdateMutationOptions(recipeId: string) {
+  return mutationOptions({
+    mutationFn: (changes: RecipeInput) =>
+      api.patch(`recipes/${encodeURIComponent(recipeId)}`, { json: changes }).json(recipeSchema),
+    onSuccess: (recipe, _changes, _onMutateResult, { client }) => {
+      // Use the response: DummyJSON stores no writes, so a refetch would bring the old recipe back
+      client.setQueryData(recipeQueryOptions(recipeId).queryKey, recipe)
+      return client.invalidateQueries({ queryKey: ['recipes', 'list'] })
     },
   })
 }

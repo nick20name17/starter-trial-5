@@ -112,7 +112,12 @@ export function RecipeListPage() {
 
   return (
     <div className='mx-auto flex w-full max-w-3xl flex-col gap-6 p-6'>
-      <h1 className='font-medium'>Recipes</h1>
+      <div className='flex items-center justify-between gap-2'>
+        <h1 className='font-medium'>Recipes</h1>
+        <Link to='/recipes/new' className={buttonVariants()}>
+          New recipe
+        </Link>
+      </div>
       <search className='flex flex-col gap-4'>
         <form className='flex gap-2' onSubmit={handleSearch}>
           <Input

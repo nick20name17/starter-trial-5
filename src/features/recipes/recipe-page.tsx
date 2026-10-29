@@ -24,17 +24,29 @@ export function RecipePage() {
 
   return (
     <article className='mx-auto flex w-full max-w-3xl flex-col items-start gap-6 p-6'>
-      <Link to='/recipes' className={buttonVariants({ variant: 'outline' })}>
-        <ArrowLeftIcon data-icon='inline-start' />
-        All recipes
-      </Link>
-      <img
-        src={recipe.image}
-        alt={recipe.name}
-        width={320}
-        height={320}
-        className='size-80 rounded-md border object-cover'
-      />
+      <div className='flex w-full gap-2'>
+        <Link to='/recipes' className={buttonVariants({ variant: 'outline' })}>
+          <ArrowLeftIcon data-icon='inline-start' />
+          All recipes
+        </Link>
+        <Link
+          to='/recipes/$recipeId/edit'
+          params={{ recipeId }}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Edit
+        </Link>
+      </div>
+      {/* A recipe created here may have no image */}
+      {recipe.image && (
+        <img
+          src={recipe.image}
+          alt={recipe.name}
+          width={320}
+          height={320}
+          className='size-80 rounded-md border object-cover'
+        />
+      )}
       <header className='flex flex-col gap-2'>
         <h1 className='font-medium'>{recipe.name}</h1>
         {recipe.tags.length > 0 && (

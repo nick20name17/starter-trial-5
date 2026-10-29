@@ -26,7 +26,30 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** ship the patched `select.tsx`, or a check after `ui:add` (a test like
   `contrast.test.tsx` that renders each ui component and asserts no stray text).
 
-## 3. The pagination nav is copied, layout-shift rules and all
+## 3. No form building block: each field is six lines of wiring
+
+- **Symptom:** the recipe form has 12 fields. Each one repeats `Field data-invalid`,
+  `FieldLabel htmlFor`, an `id`, `aria-invalid`, `register` and `FieldError errors={[...]}`.
+  Missing one of them breaks the error color, the label, or the screen-reader state without a
+  failing test. The form is 330 lines, most of it this wiring.
+- **Where:** `src/features/products/product-edit-page.tsx` and
+  `src/features/auth/sign-in-page.tsx` show the pattern; nothing in `components/` wraps it.
+- **Workaround:** written out by hand in `recipe-form.tsx`.
+- **Fix:** a `FormField` in `components/` that takes `name`, `label` and the control and does
+  the ids, `aria-invalid` and `FieldError`, or the shadcn Form pattern adapted to Base UI.
+
+## 4. No example of a controlled field: Select and Checkbox need hand-wired focus
+
+- **Symptom:** RHF focuses the first invalid field only through the `ref` it gets. A Base UI
+  `Select` takes it on the trigger; a Base UI `Checkbox` root is a `span`, so it goes to
+  `inputRef`. Finding that took reading Base UI's types. The starter's forms use only
+  `register`.
+- **Where:** `src/features/products/product-edit-page.tsx` (the only form example).
+- **Workaround:** `Controller` with `ref={field.ref}` on `SelectTrigger` and
+  `inputRef={field.ref}` on the first `Checkbox`.
+- **Fix:** one controlled field in the example form, or the `FormField` above handling it.
+
+## 5. The pagination nav is copied, layout-shift rules and all
 
 - **Symptom:** the recipes list needed the products list's 40-line pagination nav. Its
   "disabled, not hidden" and "one text node" choices are what keep e2e's layout-shift check green,
@@ -36,7 +59,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `components/pagination.tsx` that takes `page`, `pageCount` and a link render
   function, so typed `Link` stays at the call site.
 
-## 4. The app shell has no navigation
+## 6. The app shell has no navigation
 
 - **Symptom:** the header holds only the user menu and the theme toggle. Nothing links home or to
   a feature; the home page shows only `APP_NAME`, which is `'Spa'` in `vite.config.ts`.
@@ -46,7 +69,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a nav slot in the header with a link home, and `APP_NAME` read from `package.json` or
   `.env` so a new app renames itself in one place.
 
-## 5. Each search param repeats the same zod wrapper
+## 7. Each search param repeats the same zod wrapper
 
 - **Symptom:** every list param is `z.catch(z._default(schema, fallback), fallback)` with the
   fallback twice, and the sort enum repeats the keys of the sort table.
@@ -55,7 +78,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `searchParam(schema, fallback)` helper in `lib/` once a second list exists, which
   the starter could show with its own example.
 
-## 6. Each detail query repeats the 404 to notFound mapping
+## 8. Each detail query repeats the 404 to notFound mapping
 
 - **Symptom:** the recipe query copies the products query's `try`/`catch` that turns a 404 into
   the router's `notFound()`. Forgetting it shows the error page with "Try again" for a deleted or
@@ -64,6 +87,27 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Workaround:** copied into `recipeQueryOptions`.
 - **Fix:** a `notFoundOn404(promise)` helper in `lib/api.ts`, or a `queryFn` wrapper, once a
   second feature needs it.
+
+## 9. An MSW handler cannot spread the request body without a type argument
+
+- **Symptom:** `request.json()` is `any`. The products tests store it in `let changes: unknown`,
+  which works until the handler must echo it back (`{ ...body, id: 51 }`): lint forbids `as`, and
+  `no-unsafe-assignment` forbids the `any`.
+- **Where:** `src/features/products/products.test.tsx`, `oxlint.config.ts`
+  (`consistent-type-assertions: never`).
+- **Workaround:** `http.post<never, Record<string, unknown>>(...)` types the body.
+- **Fix:** use the type argument in the example test, or mention it next to the lint rule.
+
+## 10. The example shows edit but not create on an API that stores nothing
+
+- **Symptom:** DummyJSON answers `POST /recipes/add` with id 51 but does not store it, so the
+  new recipe's page loaded `GET /recipes/51` and got 404. The products example covers only an
+  update, where the old record still exists.
+- **Where:** `src/features/products/products-queries.ts` (`productUpdateMutationOptions`).
+- **Workaround:** the create mutation puts its response in the detail query's cache before the
+  page opens it; the 60 s `staleTime` keeps the loader from refetching.
+- **Fix:** a sentence in CLAUDE.md or the example next to "Use the response": a created item's
+  page reads it from the cache too.
 
 ## Worked well
 

@@ -181,3 +181,130 @@ test('unknown recipe shows the not found page', async () => {
 
   await expect.element(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
 })
+
+test('creating a recipe sends the form and opens the new recipe from the response', async () => {
+  let sent: unknown
+  worker.use(
+    http.post<never, Record<string, unknown>>('*/recipes/add', async ({ request }) => {
+      const recipe = await request.json()
+      sent = recipe
+      // DummyJSON answers with what it got and a new id it never stores
+      return HttpResponse.json({ ...recipe, id: 51 }, { status: 201 })
+    }),
+  )
+  const screen = await renderRoute('/recipes/new')
+
+  await screen.getByRole('textbox', { name: 'Name' }).fill('  Shakshuka ')
+  await screen.getByRole('textbox', { name: 'Cuisine' }).fill('Tunisian')
+  await screen.getByRole('combobox', { name: 'Difficulty' }).click()
+  await screen.getByRole('option', { name: 'Medium' }).click()
+  await screen.getByRole('checkbox', { name: 'Breakfast' }).click()
+  await screen.getByRole('textbox', { name: 'Tags' }).fill('Eggs, , Spicy ')
+  await screen.getByRole('spinbutton', { name: 'Prep time, minutes' }).fill('10')
+  await screen.getByRole('spinbutton', { name: 'Cook time, minutes' }).fill('20')
+  await screen.getByRole('spinbutton', { name: 'Servings' }).fill('2')
+  await screen.getByRole('spinbutton', { name: 'Calories per serving' }).fill('250')
+  await screen.getByRole('textbox', { name: 'Ingredients' }).fill('4 eggs\n\n Tomatoes \n')
+  await screen.getByRole('textbox', { name: 'Instructions' }).fill('Simmer the sauce.\nAdd eggs.')
+  await screen.getByRole('button', { name: 'Create recipe' }).click()
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Shakshuka' })).toBeVisible()
+  await expect.element(screen.getByRole('dialog', { name: 'Recipe created' })).toBeVisible()
+  expect(screen.router.state.location.pathname).toBe('/recipes/51')
+  expect(sent).toEqual({
+    name: 'Shakshuka',
+    image: '',
+    cuisine: 'Tunisian',
+    difficulty: 'Medium',
+    mealType: ['Breakfast'],
+    tags: ['Eggs', 'Spicy'],
+    prepTimeMinutes: 10,
+    cookTimeMinutes: 20,
+    servings: 2,
+    caloriesPerServing: 250,
+    ingredients: ['4 eggs', 'Tomatoes'],
+    instructions: ['Simmer the sauce.', 'Add eggs.'],
+  })
+})
+
+test('the recipe form shows field errors and sends nothing', async () => {
+  let requests = 0
+  worker.use(
+    http.post('*/recipes/add', () => {
+      requests += 1
+      return HttpResponse.json({})
+    }),
+  )
+  const screen = await renderRoute('/recipes/new')
+
+  await screen.getByRole('textbox', { name: 'Image URL' }).fill('cdn/pizza.webp')
+  await screen.getByRole('spinbutton', { name: 'Prep time, minutes' }).fill('2.5')
+  await screen.getByRole('spinbutton', { name: 'Servings' }).fill('')
+  await screen.getByRole('button', { name: 'Create recipe' }).click()
+
+  for (const message of [
+    'Enter a name',
+    'Enter a full URL, like https://…',
+    'Enter a cuisine',
+    'Pick at least one meal',
+    'Enter the prep time in whole minutes',
+    'Enter the servings',
+    'Add at least one ingredient',
+    'Add at least one step',
+  ]) {
+    await expect.element(screen.getByRole('alert').filter({ hasText: message })).toBeVisible()
+  }
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus()
+  expect(requests).toBe(0)
+})
+
+test('editing a recipe starts from it and shows the PATCH response', async () => {
+  let changes: unknown
+  worker.use(
+    margheritaHandler(),
+    http.patch<never, Record<string, unknown>>('*/recipes/1', async ({ request }) => {
+      const body = await request.json()
+      changes = body
+      return HttpResponse.json({ ...margherita, ...body })
+    }),
+  )
+  const screen = await renderRoute('/recipes/1/edit')
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Ingredients' }))
+    .toHaveValue('Pizza dough\nTomato sauce')
+
+  await screen.getByRole('textbox', { name: 'Name' }).fill('Margherita')
+  await screen.getByRole('checkbox', { name: 'Lunch' }).click()
+  await screen.getByRole('button', { name: 'Save' }).click()
+
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Margherita' })).toBeVisible()
+  await expect.element(screen.getByText('Dinner, Lunch')).toBeVisible()
+  await expect.element(screen.getByRole('dialog', { name: 'Recipe saved' })).toBeVisible()
+  expect(changes).toMatchObject({
+    name: 'Margherita',
+    // Not the API's 'Effortless': the form offers only the difficulties it knows
+    difficulty: 'Easy',
+    mealType: ['Dinner', 'Lunch'],
+    tags: ['Pizza', 'Italian'],
+  })
+})
+
+test('a server error shows in the recipe form, not in a toast, and keeps the form', async () => {
+  worker.use(
+    margheritaHandler(),
+    http.patch('*/recipes/1', () =>
+      HttpResponse.json({ message: 'Name is already taken' }, { status: 409 }),
+    ),
+  )
+  const screen = await renderRoute('/recipes/1/edit')
+
+  await screen.getByRole('textbox', { name: 'Name' }).fill('Pizza')
+  await screen.getByRole('button', { name: 'Save' }).click()
+
+  await expect
+    .element(screen.getByRole('alert').filter({ hasText: 'Name is already taken' }))
+    .toBeVisible()
+  await expect.element(screen.getByText('Something went wrong')).not.toBeInTheDocument()
+  await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Pizza')
+  await expect.element(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+})
