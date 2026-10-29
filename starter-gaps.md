@@ -20,7 +20,7 @@ first. Each entry: symptom, where, workaround, suggested fix. Files under
 ## 2. Deleting the example feature breaks the starter's own tests
 
 - **Symptom:** CLAUDE.md says to delete `src/features/products/` once a real feature shows the
-  same. Ten tests outside it depend on it: `auth.test.tsx` (redirect after sign-in, refresh
+  same. Seven tests outside it depend on it: `auth.test.tsx` (redirect after sign-in, refresh
   during a save), `render.test.tsx` (preload under the cursor, a test that ends mid-load) and
   `e2e/smoke.spec.ts` (sign-in journey) all open `/products` with `src/test/products.ts`.
   CLAUDE.md also names `product-list-page.tsx` as the pattern to copy. The delete is a port of
@@ -102,9 +102,10 @@ first. Each entry: symptom, where, workaround, suggested fix. Files under
 
 ## 9. The example shows edit but not create on an API that stores nothing
 
-- **Symptom:** DummyJSON answers `POST /recipes/add` with id 51 but does not store it, so the
-  new recipe's page loaded `GET /recipes/51` and got 404. The products example covers only an
-  update, where the old record still exists.
+- **Symptom:** DummyJSON answers `POST /recipes/add` with a new id but does not store it, so the
+  new recipe's page would load `GET /recipes/<new id>` and get a 404 (DummyJSON answers 404 for
+  any id past 50). The products example covers only an update, where the old record still
+  exists, so nothing in the starter points at this.
 - **Where:** `src/features/products/products-queries.ts` (`productUpdateMutationOptions`).
 - **Workaround:** the create mutation puts its response in the detail query's cache before the
   page opens it; the 60 s `staleTime` keeps the loader from refetching.
