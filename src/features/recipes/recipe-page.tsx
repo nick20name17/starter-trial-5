@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
 
+import { RecipeDeleteButton } from './recipe-delete-button'
 import { recipeQueryOptions } from './recipes-queries'
 
 const route = getRouteApi('/_authed/recipes/$recipeId/')
@@ -36,6 +37,7 @@ export function RecipePage() {
         >
           Edit
         </Link>
+        <RecipeDeleteButton recipeId={recipeId} name={recipe.name} />
       </div>
       {/* A recipe created here may have no image */}
       {recipe.image && (

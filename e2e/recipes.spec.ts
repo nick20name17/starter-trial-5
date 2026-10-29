@@ -49,6 +49,15 @@ test('edits a recipe with the real API', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Margherita Pizza' })).toBeVisible()
 })
 
+test('deletes a recipe with the real API after confirming', async ({ page }) => {
+  await page.goto('/recipes/2')
+  await page.getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Recipes' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Recipe deleted' })).toBeVisible()
+})
+
 test.describe('unknown recipe', () => {
   test.use({ expectedHttpErrors: [{ url: /\/recipes\/0$/, status: 404 }] })
 

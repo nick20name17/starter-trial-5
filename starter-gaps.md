@@ -26,7 +26,20 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** ship the patched `select.tsx`, or a check after `ui:add` (a test like
   `contrast.test.tsx` that renders each ui component and asserts no stray text).
 
-## 3. No form building block: each field is six lines of wiring
+## 3. The "navigate first, then remove the query" rule cannot be made to fail
+
+- **Symptom:** CLAUDE.md says that removing a deleted item's query before navigating away makes
+  the old page fetch it again (a 404), and that a test sees it only with a delayed handler. With
+  the order reversed on purpose, neither a Vitest test with a 300 ms list handler nor an e2e
+  run against DummyJSON (counting `GET /recipes/2`) saw a second request. The rule is followed,
+  but nothing guards it, and a test written for it would pass either way.
+- **Where:** `CLAUDE.md` (Structure), no example of a delete in `src/features/products/`.
+- **Workaround:** the delete navigates, then removes the query, with a comment; the test checks
+  only the confirmation, the DELETE and the list.
+- **Fix:** a delete in the example feature with a test that goes red on the wrong order, or
+  drop the rule if the current router and Query no longer refetch.
+
+## 4. No form building block: each field is six lines of wiring
 
 - **Symptom:** the recipe form has 12 fields. Each one repeats `Field data-invalid`,
   `FieldLabel htmlFor`, an `id`, `aria-invalid`, `register` and `FieldError errors={[...]}`.
@@ -38,7 +51,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `FormField` in `components/` that takes `name`, `label` and the control and does
   the ids, `aria-invalid` and `FieldError`, or the shadcn Form pattern adapted to Base UI.
 
-## 4. No example of a controlled field: Select and Checkbox need hand-wired focus
+## 5. No example of a controlled field: Select and Checkbox need hand-wired focus
 
 - **Symptom:** RHF focuses the first invalid field only through the `ref` it gets. A Base UI
   `Select` takes it on the trigger; a Base UI `Checkbox` root is a `span`, so it goes to
@@ -49,7 +62,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
   `inputRef={field.ref}` on the first `Checkbox`.
 - **Fix:** one controlled field in the example form, or the `FormField` above handling it.
 
-## 5. The pagination nav is copied, layout-shift rules and all
+## 6. The pagination nav is copied, layout-shift rules and all
 
 - **Symptom:** the recipes list needed the products list's 40-line pagination nav. Its
   "disabled, not hidden" and "one text node" choices are what keep e2e's layout-shift check green,
@@ -59,7 +72,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `components/pagination.tsx` that takes `page`, `pageCount` and a link render
   function, so typed `Link` stays at the call site.
 
-## 6. The app shell has no navigation
+## 7. The app shell has no navigation
 
 - **Symptom:** the header holds only the user menu and the theme toggle. Nothing links home or to
   a feature; the home page shows only `APP_NAME`, which is `'Spa'` in `vite.config.ts`.
@@ -69,7 +82,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a nav slot in the header with a link home, and `APP_NAME` read from `package.json` or
   `.env` so a new app renames itself in one place.
 
-## 7. Each search param repeats the same zod wrapper
+## 8. Each search param repeats the same zod wrapper
 
 - **Symptom:** every list param is `z.catch(z._default(schema, fallback), fallback)` with the
   fallback twice, and the sort enum repeats the keys of the sort table.
@@ -78,7 +91,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `searchParam(schema, fallback)` helper in `lib/` once a second list exists, which
   the starter could show with its own example.
 
-## 8. Each detail query repeats the 404 to notFound mapping
+## 9. Each detail query repeats the 404 to notFound mapping
 
 - **Symptom:** the recipe query copies the products query's `try`/`catch` that turns a 404 into
   the router's `notFound()`. Forgetting it shows the error page with "Try again" for a deleted or
@@ -88,7 +101,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `notFoundOn404(promise)` helper in `lib/api.ts`, or a `queryFn` wrapper, once a
   second feature needs it.
 
-## 9. An MSW handler cannot spread the request body without a type argument
+## 10. An MSW handler cannot spread the request body without a type argument
 
 - **Symptom:** `request.json()` is `any`. The products tests store it in `let changes: unknown`,
   which works until the handler must echo it back (`{ ...body, id: 51 }`): lint forbids `as`, and
@@ -98,7 +111,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Workaround:** `http.post<never, Record<string, unknown>>(...)` types the body.
 - **Fix:** use the type argument in the example test, or mention it next to the lint rule.
 
-## 10. The example shows edit but not create on an API that stores nothing
+## 11. The example shows edit but not create on an API that stores nothing
 
 - **Symptom:** DummyJSON answers `POST /recipes/add` with id 51 but does not store it, so the
   new recipe's page loaded `GET /recipes/51` and got 404. The products example covers only an
@@ -108,6 +121,17 @@ first. Each entry: symptom, where, workaround, suggested fix.
   page opens it; the 60 s `staleTime` keeps the loader from refetching.
 - **Fix:** a sentence in CLAUDE.md or the example next to "Use the response": a created item's
   page reads it from the cache too.
+
+## 12. The first Vitest run after `ui:add alert-dialog` timed out in seven unrelated tests
+
+- **Symptom:** right after adding `ui/alert-dialog.tsx`, `bun run check` failed with seven
+  tests from other files (theme toggle, contrast, sign-in) each timing out at about 9.4 s. The
+  next `vitest run` passed 49 of 49. Seen once; the cause is a guess: the new Base UI import
+  made Vite optimize a dependency mid-run, the reload `vite.config.ts` describes.
+- **Where:** `vite.config.ts` (`optimizeDeps: { force: mode === 'test' }`).
+- **Workaround:** ran it again.
+- **Fix:** list the Base UI entry points in `optimizeDeps.include`, so a new ui component does
+  not change the dependency graph during a run.
 
 ## Worked well
 

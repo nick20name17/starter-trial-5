@@ -168,3 +168,14 @@ export function recipeUpdateMutationOptions(recipeId: string) {
     },
   })
 }
+
+export function recipeDeleteMutationOptions(recipeId: string) {
+  return mutationOptions({
+    mutationFn: () =>
+      api.delete(`recipes/${encodeURIComponent(recipeId)}`).json(z.object({ id: z.number() })),
+    // The page removes the recipe's own query once it has left: removed here, the recipe page
+    // still on screen would fetch it again and get a 404
+    onSuccess: (_recipe, _variables, _onMutateResult, { client }) =>
+      client.invalidateQueries({ queryKey: ['recipes', 'list'] }),
+  })
+}
