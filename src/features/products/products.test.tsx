@@ -2,7 +2,8 @@ import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 import { userEvent } from 'vitest/browser'
 
-import { lashMascara, lashMascaraHandler, thumbnail } from '@/test/products'
+import { testImage } from '@/test/image'
+import { lashMascara, lashMascaraHandler } from '@/test/products'
 import { renderRoute } from '@/test/render'
 import { worker } from '@/test/worker'
 
@@ -10,7 +11,12 @@ function echoSearch({ request }: { request: Request }) {
   const params = new URL(request.url).searchParams
   return HttpResponse.json({
     products: [
-      { id: 1, title: `q=${params.get('q')} skip=${params.get('skip')}`, price: 9.99, thumbnail },
+      {
+        id: 1,
+        title: `q=${params.get('q')} skip=${params.get('skip')}`,
+        price: 9.99,
+        thumbnail: testImage,
+      },
     ],
     total: 30,
   })
