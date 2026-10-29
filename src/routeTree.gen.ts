@@ -14,9 +14,11 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthedProductsIndexRouteImport } from './routes/_authed/products/index'
 import { Route as AuthedRecipesIndexRouteImport } from './routes/_authed/recipes/index'
+import { Route as AuthedRecipesNewRouteImport } from './routes/_authed/recipes/new'
 import { Route as AuthedProductsProductIdIndexRouteImport } from './routes/_authed/products/$productId/index'
 import { Route as AuthedProductsProductIdEditRouteImport } from './routes/_authed/products/$productId/edit'
 import { Route as AuthedRecipesRecipeIdIndexRouteImport } from './routes/_authed/recipes/$recipeId/index'
+import { Route as AuthedRecipesRecipeIdEditRouteImport } from './routes/_authed/recipes/$recipeId/edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -42,6 +44,11 @@ const AuthedRecipesIndexRoute = AuthedRecipesIndexRouteImport.update({
   path: '/recipes/',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedRecipesNewRoute = AuthedRecipesNewRouteImport.update({
+  id: '/recipes/new',
+  path: '/recipes/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedProductsProductIdIndexRoute =
   AuthedProductsProductIdIndexRouteImport.update({
     id: '/products/$productId/',
@@ -60,22 +67,32 @@ const AuthedRecipesRecipeIdIndexRoute =
     path: '/recipes/$recipeId/',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedRecipesRecipeIdEditRoute =
+  AuthedRecipesRecipeIdEditRouteImport.update({
+    id: '/recipes/$recipeId/edit',
+    path: '/recipes/$recipeId/edit',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/recipes/new': typeof AuthedRecipesNewRoute
   '/products/': typeof AuthedProductsIndexRoute
   '/recipes/': typeof AuthedRecipesIndexRoute
   '/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
+  '/recipes/$recipeId/edit': typeof AuthedRecipesRecipeIdEditRoute
   '/products/$productId/': typeof AuthedProductsProductIdIndexRoute
   '/recipes/$recipeId/': typeof AuthedRecipesRecipeIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/recipes/new': typeof AuthedRecipesNewRoute
   '/products': typeof AuthedProductsIndexRoute
   '/recipes': typeof AuthedRecipesIndexRoute
   '/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
+  '/recipes/$recipeId/edit': typeof AuthedRecipesRecipeIdEditRoute
   '/products/$productId': typeof AuthedProductsProductIdIndexRoute
   '/recipes/$recipeId': typeof AuthedRecipesRecipeIdIndexRoute
 }
@@ -84,9 +101,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/_authed/recipes/new': typeof AuthedRecipesNewRoute
   '/_authed/products/': typeof AuthedProductsIndexRoute
   '/_authed/recipes/': typeof AuthedRecipesIndexRoute
   '/_authed/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
+  '/_authed/recipes/$recipeId/edit': typeof AuthedRecipesRecipeIdEditRoute
   '/_authed/products/$productId/': typeof AuthedProductsProductIdIndexRoute
   '/_authed/recipes/$recipeId/': typeof AuthedRecipesRecipeIdIndexRoute
 }
@@ -95,18 +114,22 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/recipes/new'
     | '/products/'
     | '/recipes/'
     | '/products/$productId/edit'
+    | '/recipes/$recipeId/edit'
     | '/products/$productId/'
     | '/recipes/$recipeId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/sign-in'
+    | '/recipes/new'
     | '/products'
     | '/recipes'
     | '/products/$productId/edit'
+    | '/recipes/$recipeId/edit'
     | '/products/$productId'
     | '/recipes/$recipeId'
   id:
@@ -114,9 +137,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/sign-in'
+    | '/_authed/recipes/new'
     | '/_authed/products/'
     | '/_authed/recipes/'
     | '/_authed/products/$productId/edit'
+    | '/_authed/recipes/$recipeId/edit'
     | '/_authed/products/$productId/'
     | '/_authed/recipes/$recipeId/'
   fileRoutesById: FileRoutesById
@@ -164,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRecipesIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/recipes/new': {
+      id: '/_authed/recipes/new'
+      path: '/recipes/new'
+      fullPath: '/recipes/new'
+      preLoaderRoute: typeof AuthedRecipesNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/products/$productId/': {
       id: '/_authed/products/$productId/'
       path: '/products/$productId'
@@ -185,21 +217,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRecipesRecipeIdIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/recipes/$recipeId/edit': {
+      id: '/_authed/recipes/$recipeId/edit'
+      path: '/recipes/$recipeId/edit'
+      fullPath: '/recipes/$recipeId/edit'
+      preLoaderRoute: typeof AuthedRecipesRecipeIdEditRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
+  AuthedRecipesNewRoute: typeof AuthedRecipesNewRoute
   AuthedProductsIndexRoute: typeof AuthedProductsIndexRoute
   AuthedRecipesIndexRoute: typeof AuthedRecipesIndexRoute
   AuthedProductsProductIdEditRoute: typeof AuthedProductsProductIdEditRoute
+  AuthedRecipesRecipeIdEditRoute: typeof AuthedRecipesRecipeIdEditRoute
   AuthedProductsProductIdIndexRoute: typeof AuthedProductsProductIdIndexRoute
   AuthedRecipesRecipeIdIndexRoute: typeof AuthedRecipesRecipeIdIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedRecipesNewRoute: AuthedRecipesNewRoute,
   AuthedProductsIndexRoute: AuthedProductsIndexRoute,
   AuthedRecipesIndexRoute: AuthedRecipesIndexRoute,
   AuthedProductsProductIdEditRoute: AuthedProductsProductIdEditRoute,
+  AuthedRecipesRecipeIdEditRoute: AuthedRecipesRecipeIdEditRoute,
   AuthedProductsProductIdIndexRoute: AuthedProductsProductIdIndexRoute,
   AuthedRecipesRecipeIdIndexRoute: AuthedRecipesRecipeIdIndexRoute,
 }

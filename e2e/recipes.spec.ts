@@ -23,6 +23,32 @@ test('filters, sorts and searches the real recipe list, then opens a recipe', as
   await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible()
 })
 
+test('creates a recipe with the real API and opens it', async ({ page }) => {
+  await page.goto('/recipes')
+  await page.getByRole('link', { name: 'New recipe' }).click()
+
+  await page.getByRole('textbox', { name: 'Name' }).fill('Shakshuka')
+  await page.getByRole('textbox', { name: 'Cuisine' }).fill('Tunisian')
+  await page.getByRole('checkbox', { name: 'Breakfast' }).click()
+  await page.getByRole('spinbutton', { name: 'Servings' }).fill('2')
+  await page.getByRole('textbox', { name: 'Ingredients' }).fill('4 eggs\nTomatoes')
+  await page.getByRole('textbox', { name: 'Instructions' }).fill('Simmer.\nAdd eggs.')
+  await page.getByRole('button', { name: 'Create recipe' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Shakshuka' })).toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Tomatoes' })).toBeVisible()
+})
+
+test('edits a recipe with the real API', async ({ page }) => {
+  await page.goto('/recipes/1')
+  await page.getByRole('link', { name: 'Edit' }).click()
+
+  await page.getByRole('textbox', { name: 'Name' }).fill('Margherita Pizza')
+  await page.getByRole('button', { name: 'Save' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Margherita Pizza' })).toBeVisible()
+})
+
 test.describe('unknown recipe', () => {
   test.use({ expectedHttpErrors: [{ url: /\/recipes\/0$/, status: 404 }] })
 
