@@ -1,10 +1,9 @@
 ## Structure
 
-- `src/features/products/` is an example feature on DummyJSON, from route to tests. Delete it once a real feature shows the same.
 - Routes own the URL and a loader that fills the Query cache. The UI comes from a feature.
 - A component above a route (a layout, a header) is on screen while that route loads. It reads what `beforeLoad` puts in route context, with `useMatch({ from, shouldThrow: false, select })`, not a query the loader awaits: StrictMode remounts it, and Query cancels a fetch its last observer leaves, so the loader gets `CancelledError`.
 - After a delete, navigate away first, then remove the deleted item's query: the old page stays on screen while the next one loads and fetches the removed item again, a 404. A test sees it only when the next page's handler is delayed.
-- A list whose search changes on the same page keeps showing until the next list loads: its loader returns on `cause === 'stay'`, and the page queries with `useDeferredValue(search)` (`product-list-page.tsx`). Update search as a function of `prev`: a spread of `useSearch()` loses a change that is still loading.
+- A list whose search changes on the same page keeps showing until the next list loads: its loader returns on `cause === 'stay'`, and the page queries with `useDeferredValue(search)` (`recipe-list-page.tsx`). Update search as a function of `prev`: a spread of `useSearch()` loses a change that is still loading.
 - Search params reach `validateSearch` as the URL's text (`src/app/router.ts`). A number param is `z.coerce.number<number>()`: the type argument keeps links typed.
 - Every API response goes through a zod schema; types come from it. Schemas are tolerant readers: only fields the UI reads, as loose as the UI can render. Enums: `z.catch(z.enum([..., 'unknown']), 'unknown')`.
 - Code starts in its feature and moves to `components/`, `hooks/` or `lib/` when a second feature needs it. Test handlers and fixtures move to `src/test/` the same way.

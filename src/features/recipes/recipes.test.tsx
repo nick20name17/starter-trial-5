@@ -1,56 +1,38 @@
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
+import { userEvent } from 'vitest/browser'
 
-import { testImage } from '@/test/image'
+import { margherita, margheritaHandler, recipeSummary, recipeTagsHandler } from '@/test/recipes'
 import { renderRoute } from '@/test/render'
 import { worker } from '@/test/worker'
 
-function recipeSummary(id: number, name: string, overrides: object = {}) {
-  return {
-    id,
-    name,
-    image: testImage,
-    rating: 4.5,
-    prepTimeMinutes: 10,
-    cookTimeMinutes: 20,
-    tags: ['Pizza'],
-    mealType: ['Dinner'],
-    ...overrides,
-  }
-}
-
-const margherita = {
-  ...recipeSummary(1, 'Classic Margherita Pizza', { tags: ['Pizza', 'Italian'] }),
-  ingredients: ['Pizza dough', 'Tomato sauce'],
-  instructions: ['Preheat the oven.', 'Bake for 15 minutes.'],
-  servings: 4,
-  difficulty: 'Effortless',
-  cuisine: 'Italian',
-  caloriesPerServing: 300,
-  reviewCount: 98,
-}
-
-function margheritaHandler() {
-  return http.get('*/recipes/1', () => HttpResponse.json(margherita))
-}
-
-function tagsHandler() {
-  return http.get('*/recipes/tags', () => HttpResponse.json(['Pizza', 'Pasta']))
-}
-
 // Names the one recipe it returns after the request, so a test reads what the page asked for
-function echoListHandler(path: string) {
-  return http.get(path, ({ request }) => {
-    const url = new URL(request.url)
-    return HttpResponse.json({
-      recipes: [recipeSummary(1, `${url.pathname}${url.search}`)],
-      total: 25,
-    })
+function echoList({ request }: { request: Request }) {
+  const url = new URL(request.url)
+  return HttpResponse.json({
+    recipes: [recipeSummary(1, `${url.pathname}${url.search}`)],
+    total: 25,
   })
 }
 
+function echoListHandler(path: string) {
+  return http.get(path, echoList)
+}
+
+// Answers the next request to path only once the test releases it
+function heldListHandler(path: string, release: Promise<void>) {
+  return http.get(
+    path,
+    async (info) => {
+      await release
+      return echoList(info)
+    },
+    { once: true },
+  )
+}
+
 test('the list sends its one filter, sort and page to the API', async () => {
-  worker.use(tagsHandler(), echoListHandler('*/recipes/meal-type/:mealType'))
+  worker.use(recipeTagsHandler(), echoListHandler('*/recipes/meal-type/:mealType'))
   const screen = await renderRoute('/recipes?mealType=Side+Dish&sort=rating&page=2')
 
   await expect
@@ -69,7 +51,7 @@ test('a search with a tag and a meal type narrows and pages every match in the a
   )
   let apiSearch = ''
   worker.use(
-    tagsHandler(),
+    recipeTagsHandler(),
     http.get('*/recipes/search', ({ request }) => {
       apiSearch = new URL(request.url).search
       return HttpResponse.json({
@@ -94,7 +76,7 @@ test('a search with a tag and a meal type narrows and pages every match in the a
 
 test('picking a filter keeps the others in the URL and opens the first page', async () => {
   worker.use(
-    tagsHandler(),
+    recipeTagsHandler(),
     echoListHandler('*/recipes/search'),
     echoListHandler('*/recipes/tag/:tag'),
   )
@@ -111,7 +93,7 @@ test('picking a filter keeps the others in the URL and opens the first page', as
 
 test('a search with no matches offers to clear the filters', async () => {
   worker.use(
-    tagsHandler(),
+    recipeTagsHandler(),
     http.get('*/recipes/search', () => HttpResponse.json({ recipes: [], total: 0 })),
     echoListHandler('*/recipes'),
   )
@@ -125,7 +107,7 @@ test('a search with no matches offers to clear the filters', async () => {
 })
 
 test('a page past the end and an unknown sort open the last page sorted by name', async () => {
-  worker.use(tagsHandler(), echoListHandler('*/recipes'))
+  worker.use(recipeTagsHandler(), echoListHandler('*/recipes'))
   const screen = await renderRoute('/recipes?sort=spiciest&page=99')
 
   await expect.element(screen.getByText('Page 3 of 3')).toBeVisible()
@@ -136,11 +118,11 @@ test('a page past the end and an unknown sort open the last page sorted by name'
 
 test('a row of the list opens its recipe', async () => {
   worker.use(
-    tagsHandler(),
+    recipeTagsHandler(),
     http.get('*/recipes', () =>
       HttpResponse.json({ recipes: [recipeSummary(1, 'Classic Margherita Pizza')], total: 1 }),
     ),
-    margheritaHandler(),
+    http.get('*/recipes/1', () => HttpResponse.json({ ...margherita, difficulty: 'Effortless' })),
   )
   const screen = await renderRoute('/recipes')
 
@@ -282,7 +264,6 @@ test('editing a recipe starts from it and shows the PATCH response', async () =>
   await expect.element(screen.getByRole('dialog', { name: 'Recipe saved' })).toBeVisible()
   expect(changes).toMatchObject({
     name: 'Margherita',
-    // Not the API's 'Effortless': the form offers only the difficulties it knows
     difficulty: 'Easy',
     mealType: ['Dinner', 'Lunch'],
     tags: ['Pizza', 'Italian'],
@@ -312,7 +293,7 @@ test('a server error shows in the recipe form, not in a toast, and keeps the for
 test('deleting a recipe asks first, then opens the list', async () => {
   let deletes = 0
   worker.use(
-    tagsHandler(),
+    recipeTagsHandler(),
     margheritaHandler(),
     http.delete('*/recipes/1', () => {
       deletes += 1
@@ -374,4 +355,79 @@ test('a delete the API refuses keeps the dialog open and shows why', async () =>
     .toBeVisible()
   await expect.element(dialog.getByRole('button', { name: 'Delete' })).toBeEnabled()
   expect(screen.router.state.location.pathname).toBe('/recipes/1')
+})
+
+test('a search loads from the first page and keeps the page on screen, with focus in the field', async () => {
+  const release = Promise.withResolvers<void>()
+  worker.use(recipeTagsHandler(), echoListHandler('*/recipes'))
+  const screen = await renderRoute('/recipes?page=2')
+  const firstList = screen.getByRole('link', { name: /^\/recipes\?.*&skip=10&/ })
+  await expect.element(firstList).toBeVisible()
+  worker.use(heldListHandler('*/recipes/search', release.promise))
+  const searchbox = screen.getByRole('searchbox', { name: 'Search recipes' })
+
+  await searchbox.fill('pizza')
+  await userEvent.keyboard('{Enter}')
+  // The router replaces a page that loads longer than its pendingMs, 1 s, with a spinner
+  await new Promise((resolve) => {
+    setTimeout(resolve, 1100)
+  })
+
+  await expect.element(firstList).toBeVisible()
+  release.resolve()
+  await expect
+    .element(screen.getByRole('link', { name: /^\/recipes\/search\?q=pizza&.*&skip=0&/ }))
+    .toBeVisible()
+  await expect.element(searchbox).toHaveFocus()
+})
+
+test('the next page keeps a search that is still loading', async () => {
+  const release = Promise.withResolvers<void>()
+  worker.use(recipeTagsHandler(), echoListHandler('*/recipes'), echoListHandler('*/recipes/search'))
+  const screen = await renderRoute('/recipes')
+  await expect.element(screen.getByText('Page 1 of 3')).toBeVisible()
+  worker.use(heldListHandler('*/recipes/search', release.promise))
+
+  await screen.getByRole('searchbox', { name: 'Search recipes' }).fill('pizza')
+  await userEvent.keyboard('{Enter}')
+  await screen.getByRole('link', { name: 'Next' }).click()
+  release.resolve()
+
+  await expect
+    .element(screen.getByRole('link', { name: /^\/recipes\/search\?q=pizza&.*&skip=10&/ }))
+    .toBeVisible()
+})
+
+test('a q too long for a JS number keeps its digits in the API request and in links', async () => {
+  worker.use(recipeTagsHandler(), echoListHandler('*/recipes/search'))
+  const screen = await renderRoute('/recipes?q=723421968459640832')
+
+  await expect
+    .element(screen.getByRole('link', { name: /^\/recipes\/search\?q=723421968459640832&/ }))
+    .toBeVisible()
+  await expect
+    .element(screen.getByRole('link', { name: 'Next' }))
+    .toHaveAttribute('href', '/recipes?q=723421968459640832&page=2')
+})
+
+test('the Save button keeps its width while saving, so the Cancel link beside it stays put', async () => {
+  const response = Promise.withResolvers<void>()
+  worker.use(
+    margheritaHandler(),
+    http.patch('*/recipes/1', async () => {
+      await response.promise
+      return HttpResponse.json(margherita)
+    }),
+  )
+  const screen = await renderRoute('/recipes/1/edit')
+  // The element, not a locator: the spinner adds "Loading" to the button's name
+  const save = await screen.getByRole('button', { name: 'Save' }).findElement()
+  const widthBefore = save.getBoundingClientRect().width
+
+  await userEvent.click(save)
+
+  await expect.element(save).toBeDisabled()
+  expect(save.getBoundingClientRect().width).toBe(widthBefore)
+  response.resolve()
+  await expect.element(screen.getByRole('dialog', { name: 'Recipe saved' })).toBeVisible()
 })
