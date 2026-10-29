@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   ],
-  define: { 'import.meta.env.APP_NAME': JSON.stringify('Spa') },
+  define: { 'import.meta.env.APP_NAME': JSON.stringify('Recipe Book') },
   resolve: { tsconfigPaths: true },
   // A dep missing from a stale cache makes Vite reload mid-run and load React twice
   optimizeDeps: { force: mode === 'test' },

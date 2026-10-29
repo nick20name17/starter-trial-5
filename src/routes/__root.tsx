@@ -1,7 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { HeadContent, Outlet, createRootRouteWithContext } from '@tanstack/react-router'
+import { HeadContent, Link, Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 
 import { ThemeToggle } from '@/components/theme-toggle'
+import { buttonVariants } from '@/components/ui/button'
 import { UserMenu } from '@/features/auth/user-menu'
 
 interface RouterContext {
@@ -18,7 +19,15 @@ function RootLayout() {
       <HeadContent />
       {/* Pages fill the space with flex-1: min-h-svh would add the header's height and scroll */}
       <div className='flex min-h-svh flex-col'>
-        <header className='flex items-center justify-end gap-2 p-4'>
+        <header className='flex items-center gap-2 p-4'>
+          <nav aria-label='Main' className='mr-auto flex gap-1'>
+            <Link to='/' className={buttonVariants({ variant: 'ghost' })}>
+              {import.meta.env.APP_NAME}
+            </Link>
+            <Link to='/recipes' className={buttonVariants({ variant: 'ghost' })}>
+              Recipes
+            </Link>
+          </nav>
           <UserMenu />
           <ThemeToggle />
         </header>
