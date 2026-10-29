@@ -308,3 +308,70 @@ test('a server error shows in the recipe form, not in a toast, and keeps the for
   await expect.element(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('Pizza')
   await expect.element(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
 })
+
+test('deleting a recipe asks first, then opens the list', async () => {
+  let deletes = 0
+  worker.use(
+    tagsHandler(),
+    margheritaHandler(),
+    http.delete('*/recipes/1', () => {
+      deletes += 1
+      return HttpResponse.json({ ...margherita, isDeleted: true })
+    }),
+    http.get('*/recipes', () => HttpResponse.json({ recipes: [], total: 0 })),
+  )
+  const screen = await renderRoute('/recipes/1')
+
+  await screen.getByRole('button', { name: 'Delete' }).click()
+  const dialog = screen.getByRole('alertdialog', { name: 'Delete this recipe?' })
+  await expect
+    .element(dialog.getByText('“Classic Margherita Pizza” will be deleted. You can’t undo this.'))
+    .toBeVisible()
+  expect(deletes).toBe(0)
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+
+  await expect.element(screen.getByText('There are no recipes yet.')).toBeVisible()
+  await expect.element(screen.getByRole('dialog', { name: 'Recipe deleted' })).toBeVisible()
+  expect(deletes).toBe(1)
+})
+
+test('cancelling the delete keeps the recipe and sends nothing', async () => {
+  let deletes = 0
+  worker.use(
+    margheritaHandler(),
+    http.delete('*/recipes/1', () => {
+      deletes += 1
+      return HttpResponse.json(margherita)
+    }),
+  )
+  const screen = await renderRoute('/recipes/1')
+
+  await screen.getByRole('button', { name: 'Delete' }).click()
+  await screen.getByRole('button', { name: 'Cancel' }).click()
+
+  await expect.element(screen.getByRole('alertdialog')).not.toBeInTheDocument()
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Classic Margherita Pizza' }))
+    .toBeVisible()
+  expect(deletes).toBe(0)
+})
+
+test('a delete the API refuses keeps the dialog open and shows why', async () => {
+  worker.use(
+    margheritaHandler(),
+    http.delete('*/recipes/1', () =>
+      HttpResponse.json({ message: 'Recipe is in a meal plan' }, { status: 409 }),
+    ),
+  )
+  const screen = await renderRoute('/recipes/1')
+
+  await screen.getByRole('button', { name: 'Delete' }).click()
+  const dialog = screen.getByRole('alertdialog', { name: 'Delete this recipe?' })
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+
+  await expect
+    .element(screen.getByRole('alert').filter({ hasText: 'Recipe is in a meal plan' }))
+    .toBeVisible()
+  await expect.element(dialog.getByRole('button', { name: 'Delete' })).toBeEnabled()
+  expect(screen.router.state.location.pathname).toBe('/recipes/1')
+})
