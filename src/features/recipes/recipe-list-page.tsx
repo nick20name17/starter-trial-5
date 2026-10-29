@@ -210,7 +210,10 @@ export function RecipeListPage() {
           <ItemGroup key={JSON.stringify(listSearch)}>
             {data.recipes.map((recipe) => (
               <li key={recipe.id}>
-                <Item variant='outline'>
+                <Item
+                  variant='outline'
+                  render={<Link to='/recipes/$recipeId' params={{ recipeId: String(recipe.id) }} />}
+                >
                   <ItemMedia variant='image'>
                     <img src={recipe.image} alt='' width={32} height={32} />
                   </ItemMedia>
