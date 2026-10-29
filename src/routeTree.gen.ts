@@ -16,6 +16,7 @@ import { Route as AuthedProductsIndexRouteImport } from './routes/_authed/produc
 import { Route as AuthedRecipesIndexRouteImport } from './routes/_authed/recipes/index'
 import { Route as AuthedProductsProductIdIndexRouteImport } from './routes/_authed/products/$productId/index'
 import { Route as AuthedProductsProductIdEditRouteImport } from './routes/_authed/products/$productId/edit'
+import { Route as AuthedRecipesRecipeIdIndexRouteImport } from './routes/_authed/recipes/$recipeId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +54,12 @@ const AuthedProductsProductIdEditRoute =
     path: '/products/$productId/edit',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedRecipesRecipeIdIndexRoute =
+  AuthedRecipesRecipeIdIndexRouteImport.update({
+    id: '/recipes/$recipeId/',
+    path: '/recipes/$recipeId/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/recipes/': typeof AuthedRecipesIndexRoute
   '/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
   '/products/$productId/': typeof AuthedProductsProductIdIndexRoute
+  '/recipes/$recipeId/': typeof AuthedRecipesRecipeIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,6 +77,7 @@ export interface FileRoutesByTo {
   '/recipes': typeof AuthedRecipesIndexRoute
   '/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
   '/products/$productId': typeof AuthedProductsProductIdIndexRoute
+  '/recipes/$recipeId': typeof AuthedRecipesRecipeIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,6 +88,7 @@ export interface FileRoutesById {
   '/_authed/recipes/': typeof AuthedRecipesIndexRoute
   '/_authed/products/$productId/edit': typeof AuthedProductsProductIdEditRoute
   '/_authed/products/$productId/': typeof AuthedProductsProductIdIndexRoute
+  '/_authed/recipes/$recipeId/': typeof AuthedRecipesRecipeIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/recipes/'
     | '/products/$productId/edit'
     | '/products/$productId/'
+    | '/recipes/$recipeId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/recipes'
     | '/products/$productId/edit'
     | '/products/$productId'
+    | '/recipes/$recipeId'
   id:
     | '__root__'
     | '/'
@@ -106,6 +118,7 @@ export interface FileRouteTypes {
     | '/_authed/recipes/'
     | '/_authed/products/$productId/edit'
     | '/_authed/products/$productId/'
+    | '/_authed/recipes/$recipeId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProductsProductIdEditRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/recipes/$recipeId/': {
+      id: '/_authed/recipes/$recipeId/'
+      path: '/recipes/$recipeId'
+      fullPath: '/recipes/$recipeId/'
+      preLoaderRoute: typeof AuthedRecipesRecipeIdIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
@@ -173,6 +193,7 @@ interface AuthedRouteChildren {
   AuthedRecipesIndexRoute: typeof AuthedRecipesIndexRoute
   AuthedProductsProductIdEditRoute: typeof AuthedProductsProductIdEditRoute
   AuthedProductsProductIdIndexRoute: typeof AuthedProductsProductIdIndexRoute
+  AuthedRecipesRecipeIdIndexRoute: typeof AuthedRecipesRecipeIdIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -180,6 +201,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedRecipesIndexRoute: AuthedRecipesIndexRoute,
   AuthedProductsProductIdEditRoute: AuthedProductsProductIdEditRoute,
   AuthedProductsProductIdIndexRoute: AuthedProductsProductIdIndexRoute,
+  AuthedRecipesRecipeIdIndexRoute: AuthedRecipesRecipeIdIndexRoute,
 }
 
 const AuthedRouteWithChildren =

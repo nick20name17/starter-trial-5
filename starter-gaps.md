@@ -9,7 +9,8 @@ first. Each entry: symptom, where, workaround, suggested fix.
   against DummyJSON. An agent cannot type the demo password into a browser, so the only visual
   check was a throwaway Playwright spec that uses the `signedIn` fixture and takes a screenshot.
 - **Where:** `src/routes/_authed.tsx`, `e2e/fixtures.ts` (the only code that can sign in), no
-  dev-mode mocks.
+  dev-mode mocks. The `playwright-cli` skill in `.claude/skills/` drives a browser but has the
+  same sign-in problem.
 - **Workaround:** a temporary `e2e/zz-shot.spec.ts` with `test.use({ signedIn: true })` and
   `page.screenshot`, deleted before the commit.
 - **Fix:** a `bun run screenshot <path>` script (or a Playwright project) that reuses the
@@ -53,6 +54,16 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Workaround:** a local `text(fallback)` helper in the recipes route.
 - **Fix:** a `searchParam(schema, fallback)` helper in `lib/` once a second list exists, which
   the starter could show with its own example.
+
+## 6. Each detail query repeats the 404 to notFound mapping
+
+- **Symptom:** the recipe query copies the products query's `try`/`catch` that turns a 404 into
+  the router's `notFound()`. Forgetting it shows the error page with "Try again" for a deleted or
+  mistyped id.
+- **Where:** `src/features/products/products-queries.ts` (`productQueryOptions`).
+- **Workaround:** copied into `recipeQueryOptions`.
+- **Fix:** a `notFoundOn404(promise)` helper in `lib/api.ts`, or a `queryFn` wrapper, once a
+  second feature needs it.
 
 ## Worked well
 

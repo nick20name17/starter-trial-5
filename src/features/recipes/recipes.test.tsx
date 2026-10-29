@@ -19,6 +19,21 @@ function recipeSummary(id: number, name: string, overrides: object = {}) {
   }
 }
 
+const margherita = {
+  ...recipeSummary(1, 'Classic Margherita Pizza', { tags: ['Pizza', 'Italian'] }),
+  ingredients: ['Pizza dough', 'Tomato sauce'],
+  instructions: ['Preheat the oven.', 'Bake for 15 minutes.'],
+  servings: 4,
+  difficulty: 'Effortless',
+  cuisine: 'Italian',
+  caloriesPerServing: 300,
+  reviewCount: 98,
+}
+
+function margheritaHandler() {
+  return http.get('*/recipes/1', () => HttpResponse.json(margherita))
+}
+
 function tagsHandler() {
   return http.get('*/recipes/tags', () => HttpResponse.json(['Pizza', 'Pasta']))
 }
@@ -117,4 +132,52 @@ test('a page past the end and an unknown sort open the last page sorted by name'
   await expect
     .element(screen.getByText(/^\/recipes\?sortBy=name&order=asc&limit=10&skip=20&/))
     .toBeVisible()
+})
+
+test('a row of the list opens its recipe', async () => {
+  worker.use(
+    tagsHandler(),
+    http.get('*/recipes', () =>
+      HttpResponse.json({ recipes: [recipeSummary(1, 'Classic Margherita Pizza')], total: 1 }),
+    ),
+    margheritaHandler(),
+  )
+  const screen = await renderRoute('/recipes')
+
+  await screen.getByRole('link', { name: /^Classic Margherita Pizza/ }).click()
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Classic Margherita Pizza' }))
+    .toBeVisible()
+  await expect
+    .element(screen.getByRole('listitem').filter({ hasText: 'Tomato sauce' }))
+    .toBeVisible()
+  await expect.element(screen.getByText('Bake for 15 minutes.')).toBeVisible()
+  // An unknown difficulty from the API renders as a dash instead of failing the page
+  await expect.element(screen.getByText('—')).toBeVisible()
+  await expect.poll(() => document.title).toBe('Classic Margherita Pizza')
+})
+
+test('recipe id stays one segment of the API path', async () => {
+  worker.use(
+    http.get('*/recipes/:recipeId', ({ request }) =>
+      HttpResponse.json({ ...margherita, name: new URL(request.url).pathname }),
+    ),
+  )
+  const screen = await renderRoute('/recipes/..%2Fusers')
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: '/recipes/..%2Fusers' }))
+    .toBeVisible()
+})
+
+test('unknown recipe shows the not found page', async () => {
+  worker.use(
+    http.get('*/recipes/404', () =>
+      HttpResponse.json({ message: "Recipe with id '404' not found" }, { status: 404 }),
+    ),
+  )
+  const screen = await renderRoute('/recipes/404')
+
+  await expect.element(screen.getByRole('heading', { name: 'Page not found' })).toBeVisible()
 })

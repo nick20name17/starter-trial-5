@@ -1,4 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
+import { notFound } from '@tanstack/react-router'
+import { isHTTPError } from 'ky'
 import { z } from 'zod/mini'
 
 import { api } from '@/lib/api'
@@ -48,6 +50,16 @@ const recipeSummarySchema = z.object({
 const recipeListSchema = z.object({
   recipes: z.array(recipeSummarySchema),
   total: z.number(),
+})
+
+const recipeSchema = z.extend(recipeSummarySchema, {
+  ingredients: z.array(z.string()),
+  instructions: z.array(z.string()),
+  servings: z.number(),
+  difficulty: z.catch(z.enum(['Easy', 'Medium', 'Hard', 'unknown']), 'unknown'),
+  cuisine: z.string(),
+  caloriesPerServing: z.number(),
+  reviewCount: z.number(),
 })
 
 export function recipeTagsQueryOptions() {
@@ -103,6 +115,22 @@ export function recipeListQueryOptions(search: RecipeListSearch) {
       if (!narrowsInApp) return list
       const matches = list.recipes.filter((recipe) => matchesFilters(recipe, search))
       return { recipes: matches.slice(skip, skip + RECIPES_PER_PAGE), total: matches.length }
+    },
+  })
+}
+
+export function recipeQueryOptions(recipeId: string) {
+  return queryOptions({
+    queryKey: ['recipes', 'detail', recipeId],
+    queryFn: async ({ signal }) => {
+      try {
+        return await api
+          .get(`recipes/${encodeURIComponent(recipeId)}`, { signal })
+          .json(recipeSchema)
+      } catch (error) {
+        if (isHTTPError(error) && error.response.status === 404) throw notFound()
+        throw error
+      }
     },
   })
 }
