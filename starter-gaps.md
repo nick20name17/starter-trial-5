@@ -144,7 +144,7 @@ first. Each entry: symptom, where, workaround, suggested fix. Files under
 
 - **Symptom:** after adding `ui/alert-dialog.tsx`, `bun run check` failed with seven tests from
   other files (theme toggle, contrast, sign-in) each timing out. Later, with the machine's load
-  average at 16 on 8 cores (other processes), three of four `vitest run`s failed the same way:
+  average at 16 on 8 cores (other processes), all four `vitest run`s failed the same way:
   the first test of a file times out at 5 s, or a `click` gets a 1–200 ms budget. CI passed
   every time.
 - **Where:** `vite.config.ts` (`testTimeout: 5000`, set low so a missing handler fails fast),
