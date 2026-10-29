@@ -140,16 +140,18 @@ first. Each entry: symptom, where, workaround, suggested fix. Files under
 - **Workaround:** `http.post<never, Record<string, unknown>>(...)` types the body.
 - **Fix:** use the type argument in the example test, or mention it next to the lint rule.
 
-## 13. The first Vitest run after `ui:add alert-dialog` timed out in seven unrelated tests
+## 13. Vitest times out in unrelated tests when the machine is busy
 
-- **Symptom:** right after adding `ui/alert-dialog.tsx`, `bun run check` failed with seven
-  tests from other files (theme toggle, contrast, sign-in) each timing out at about 9.4 s. The
-  next `vitest run` passed 49 of 49. Seen once; the cause is a guess: the new Base UI import
-  made Vite optimize a dependency mid-run, the reload `vite.config.ts` describes.
-- **Where:** `vite.config.ts` (`optimizeDeps: { force: mode === 'test' }`).
-- **Workaround:** ran it again.
-- **Fix:** list the Base UI entry points in `optimizeDeps.include`, so a new ui component does
-  not change the dependency graph during a run.
+- **Symptom:** after adding `ui/alert-dialog.tsx`, `bun run check` failed with seven tests from
+  other files (theme toggle, contrast, sign-in) each timing out. Later, with the machine's load
+  average at 16 on 8 cores (other processes), three of four `vitest run`s failed the same way:
+  the first test of a file times out at 5 s, or a `click` gets a 1–200 ms budget. CI passed
+  every time.
+- **Where:** `vite.config.ts` (`testTimeout: 5000`, set low so a missing handler fails fast),
+  Vitest running every file in parallel browser tabs.
+- **Workaround:** ran it again; trusted CI.
+- **Fix:** a lower `maxWorkers` for local runs, or a `testTimeout` that scales with
+  `process.env.CI`, keeping the fast fail in CI where load is known.
 
 ## Worked well
 
