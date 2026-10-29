@@ -1,0 +1,4 @@
+[install]
+exact = true
+# 3 days: most hijacked releases are pulled by then
+minimumReleaseAge = 259200

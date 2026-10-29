@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -e '.tool_input.command | test(\"\\\\bgit\\\\b[^|;&\\\\n]*\\\\bcommit\\\\b|\\\\bgh\\\\s+pr\\\\s+(create|edit)\\\\b\") and test(\"\\\\p{Cyrillic}\")' >/dev/null && { echo 'Commits and PRs are in English. Rewrite the message in English. If the Cyrillic is not part of the message, run the commit or PR command on its own.' >&2; exit 2; } || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check.sh",
+            "timeout": 300,
+            "statusMessage": "Running bun run check"
+          }
+        ]
+      }
+    ]
+  }
+}
