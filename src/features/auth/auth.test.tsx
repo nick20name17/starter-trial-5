@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
 
 import { setSession } from '@/lib/session'
-import { lashMascara, lashMascaraHandler } from '@/test/products'
+import { margherita, margheritaHandler } from '@/test/recipes'
 import { renderRoute, signedInSession, signedInUser } from '@/test/render'
 import { worker } from '@/test/worker'
 
@@ -13,19 +13,19 @@ test('signing in opens the page the user first asked for', async () => {
       credentials = await request.json()
       return HttpResponse.json({ ...signedInUser, ...signedInSession })
     }),
-    lashMascaraHandler(),
+    margheritaHandler(),
   )
-  const screen = await renderRoute('/products/1', { signedIn: false })
+  const screen = await renderRoute('/recipes/1', { signedIn: false })
 
   await screen.getByRole('textbox', { name: 'Username' }).fill(' emilys ')
   await screen.getByLabelText('Password').fill('emilyspass')
   await screen.getByRole('button', { name: 'Sign in' }).click()
 
   await expect
-    .element(screen.getByRole('heading', { level: 1, name: 'Lash Mascara' }))
+    .element(screen.getByRole('heading', { level: 1, name: 'Classic Margherita Pizza' }))
     .toBeVisible()
   await expect.element(screen.getByText('Emily Johnson')).toBeVisible()
-  expect(screen.router.state.location.pathname).toBe('/products/1')
+  expect(screen.router.state.location.pathname).toBe('/recipes/1')
   expect(credentials).toEqual({ username: 'emilys', password: 'emilyspass' })
 })
 
@@ -48,8 +48,8 @@ test('wrong credentials show in the form, not in a toast', async () => {
 })
 
 test('signing out opens the sign-in page', async () => {
-  worker.use(lashMascaraHandler())
-  const screen = await renderRoute('/products/1')
+  worker.use(margheritaHandler())
+  const screen = await renderRoute('/recipes/1')
 
   await screen.getByRole('button', { name: 'Sign out' }).click()
 
@@ -67,7 +67,7 @@ test('a session the API no longer accepts opens the sign-in page, not an error',
       HttpResponse.json({ message: 'Invalid refresh token' }, { status: 403 }),
     ),
   )
-  const screen = await renderRoute('/products/1', { signedIn: false })
+  const screen = await renderRoute('/recipes/1', { signedIn: false })
 
   await expect.element(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 })
@@ -90,21 +90,21 @@ test('a token refresh during a save keeps the page and the signed-in user', asyn
       meRequests += 1
       return HttpResponse.json(signedInUser)
     }),
-    lashMascaraHandler(),
+    margheritaHandler(),
     http.patch(
-      '*/products/1',
+      '*/recipes/1',
       () => HttpResponse.json({ message: 'Invalid/Expired Token!' }, { status: 401 }),
       { once: true },
     ),
-    http.patch('*/products/1', () => HttpResponse.json(lashMascara)),
+    http.patch('*/recipes/1', () => HttpResponse.json(margherita)),
     http.post('*/auth/refresh', () =>
       HttpResponse.json({ accessToken: 'access-2', refreshToken: 'refresh-2' }),
     ),
   )
-  const screen = await renderRoute('/products/1/edit', { signedIn: false })
+  const screen = await renderRoute('/recipes/1/edit', { signedIn: false })
 
   await screen.getByRole('button', { name: 'Save' }).click()
 
-  await expect.element(screen.getByRole('dialog', { name: 'Product saved' })).toBeVisible()
+  await expect.element(screen.getByRole('dialog', { name: 'Recipe saved' })).toBeVisible()
   expect(meRequests).toBe(1)
 })

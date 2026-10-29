@@ -1,7 +1,8 @@
 # Starter gaps
 
 Places where the starter got in the way while building the recipes app on DummyJSON. Most severe
-first. Each entry: symptom, where, workaround, suggested fix.
+first. Each entry: symptom, where, workaround, suggested fix. Files under
+`src/features/products/` are the starter's; this repo deleted them in the last PR.
 
 ## 1. No way to look at a signed-in page in the dev server without typing real credentials
 
@@ -16,15 +17,22 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `bun run screenshot <path>` script (or a Playwright project) that reuses the
   `signedIn` fixture, or an opt-in dev mode that starts MSW with the test handlers.
 
-## 2. The shadcn Select trigger reads "Pasta▼"
+## 2. Deleting the example feature breaks the starter's own tests
 
-- **Symptom:** a test of the selected tag failed: the trigger's text was `Pasta▼`. The generated
-  `SelectTrigger` passes the chevron as `render={<ChevronDownIcon />}`; Base UI's `Select.Icon`
-  then renders its default `▼` child inside the svg.
-- **Where:** `src/components/ui/select.tsx` as `bun run ui:add select` writes it.
-- **Workaround:** the chevron is a child of `Select.Icon`, not its `render`.
-- **Fix:** ship the patched `select.tsx`, or a check after `ui:add` (a test like
-  `contrast.test.tsx` that renders each ui component and asserts no stray text).
+- **Symptom:** CLAUDE.md says to delete `src/features/products/` once a real feature shows the
+  same. Ten tests outside it depend on it: `auth.test.tsx` (redirect after sign-in, refresh
+  during a save), `render.test.tsx` (preload under the cursor, a test that ends mid-load) and
+  `e2e/smoke.spec.ts` (sign-in journey) all open `/products` with `src/test/products.ts`.
+  CLAUDE.md also names `product-list-page.tsx` as the pattern to copy. The delete is a port of
+  the starter's guards, not a delete.
+- **Where:** `src/features/auth/auth.test.tsx`, `src/test/render.test.tsx`,
+  `src/test/products.ts`, `e2e/smoke.spec.ts`, `CLAUDE.md`.
+- **Workaround:** the products tests that guard starter behavior (search keeps the list and
+  focus, next page during a search, long numeric `q`, Save keeps its width, id as one path
+  segment, 404) were rewritten for recipes; auth and render tests now open `/recipes/1`; the
+  recipe fixtures moved to `src/test/recipes.ts`.
+- **Fix:** list in CLAUDE.md which tests to port when the example goes, or have the starter's
+  infrastructure tests use their own tiny route under `src/test/` instead of the example.
 
 ## 3. The "navigate first, then remove the query" rule cannot be made to fail
 
@@ -72,7 +80,17 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a `components/pagination.tsx` that takes `page`, `pageCount` and a link render
   function, so typed `Link` stays at the call site.
 
-## 7. The app shell has no navigation
+## 7. The shadcn Select trigger reads "Pasta▼"
+
+- **Symptom:** a test of the selected tag failed: the trigger's text was `Pasta▼`. The generated
+  `SelectTrigger` passes the chevron as `render={<ChevronDownIcon />}`; Base UI's `Select.Icon`
+  then renders its default `▼` child inside the svg.
+- **Where:** `src/components/ui/select.tsx` as `bun run ui:add select` writes it.
+- **Workaround:** the chevron is a child of `Select.Icon`, not its `render`.
+- **Fix:** ship the patched `select.tsx`, or a check after `ui:add` (a test like
+  `contrast.test.tsx` that renders each ui component and asserts no stray text).
+
+## 8. The app shell has no navigation
 
 - **Symptom:** the header holds only the user menu and the theme toggle. Nothing links home or to
   a feature; the home page shows only `APP_NAME`, which is `'Spa'` in `vite.config.ts`.
@@ -82,36 +100,7 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a nav slot in the header with a link home, and `APP_NAME` read from `package.json` or
   `.env` so a new app renames itself in one place.
 
-## 8. Each search param repeats the same zod wrapper
-
-- **Symptom:** every list param is `z.catch(z._default(schema, fallback), fallback)` with the
-  fallback twice, and the sort enum repeats the keys of the sort table.
-- **Where:** `src/routes/_authed/products/index.tsx` is the pattern to copy.
-- **Workaround:** a local `text(fallback)` helper in the recipes route.
-- **Fix:** a `searchParam(schema, fallback)` helper in `lib/` once a second list exists, which
-  the starter could show with its own example.
-
-## 9. Each detail query repeats the 404 to notFound mapping
-
-- **Symptom:** the recipe query copies the products query's `try`/`catch` that turns a 404 into
-  the router's `notFound()`. Forgetting it shows the error page with "Try again" for a deleted or
-  mistyped id.
-- **Where:** `src/features/products/products-queries.ts` (`productQueryOptions`).
-- **Workaround:** copied into `recipeQueryOptions`.
-- **Fix:** a `notFoundOn404(promise)` helper in `lib/api.ts`, or a `queryFn` wrapper, once a
-  second feature needs it.
-
-## 10. An MSW handler cannot spread the request body without a type argument
-
-- **Symptom:** `request.json()` is `any`. The products tests store it in `let changes: unknown`,
-  which works until the handler must echo it back (`{ ...body, id: 51 }`): lint forbids `as`, and
-  `no-unsafe-assignment` forbids the `any`.
-- **Where:** `src/features/products/products.test.tsx`, `oxlint.config.ts`
-  (`consistent-type-assertions: never`).
-- **Workaround:** `http.post<never, Record<string, unknown>>(...)` types the body.
-- **Fix:** use the type argument in the example test, or mention it next to the lint rule.
-
-## 11. The example shows edit but not create on an API that stores nothing
+## 9. The example shows edit but not create on an API that stores nothing
 
 - **Symptom:** DummyJSON answers `POST /recipes/add` with id 51 but does not store it, so the
   new recipe's page loaded `GET /recipes/51` and got 404. The products example covers only an
@@ -122,7 +111,36 @@ first. Each entry: symptom, where, workaround, suggested fix.
 - **Fix:** a sentence in CLAUDE.md or the example next to "Use the response": a created item's
   page reads it from the cache too.
 
-## 12. The first Vitest run after `ui:add alert-dialog` timed out in seven unrelated tests
+## 10. Each detail query repeats the 404 to notFound mapping
+
+- **Symptom:** the recipe query copies the products query's `try`/`catch` that turns a 404 into
+  the router's `notFound()`. Forgetting it shows the error page with "Try again" for a deleted or
+  mistyped id.
+- **Where:** `src/features/products/products-queries.ts` (`productQueryOptions`).
+- **Workaround:** copied into `recipeQueryOptions`.
+- **Fix:** a `notFoundOn404(promise)` helper in `lib/api.ts`, or a `queryFn` wrapper, once a
+  second feature needs it.
+
+## 11. Each search param repeats the same zod wrapper
+
+- **Symptom:** every list param is `z.catch(z._default(schema, fallback), fallback)` with the
+  fallback twice, and the sort enum repeats the keys of the sort table.
+- **Where:** `src/routes/_authed/products/index.tsx` is the pattern to copy.
+- **Workaround:** a local `text(fallback)` helper in the recipes route.
+- **Fix:** a `searchParam(schema, fallback)` helper in `lib/` once a second list exists, which
+  the starter could show with its own example.
+
+## 12. An MSW handler cannot spread the request body without a type argument
+
+- **Symptom:** `request.json()` is `any`. The products tests store it in `let changes: unknown`,
+  which works until the handler must echo it back (`{ ...body, id: 51 }`): lint forbids `as`, and
+  `no-unsafe-assignment` forbids the `any`.
+- **Where:** `src/features/products/products.test.tsx`, `oxlint.config.ts`
+  (`consistent-type-assertions: never`).
+- **Workaround:** `http.post<never, Record<string, unknown>>(...)` types the body.
+- **Fix:** use the type argument in the example test, or mention it next to the lint rule.
+
+## 13. The first Vitest run after `ui:add alert-dialog` timed out in seven unrelated tests
 
 - **Symptom:** right after adding `ui/alert-dialog.tsx`, `bun run check` failed with seven
   tests from other files (theme toggle, contrast, sign-in) each timing out at about 9.4 s. The
@@ -139,3 +157,9 @@ first. Each entry: symptom, where, workaround, suggested fix.
   failures specific.
 - The products list showed the `useDeferredValue` + `cause === 'stay'` pattern; copying it gave a
   list that keeps its rows while the next filter loads, with no layout shift in e2e.
+- The e2e fixtures (axe, layout shifts, unexpected HTTP errors, `signedIn`) checked every journey
+  for free, and `test.use({ expectedHttpErrors })` made the real-API 404 test one line.
+- `<Button pending>` kept the Save and Delete buttons' width; no layout-shift failures in CI.
+- Auth needed no changes: `_authed`, token refresh and sign-out covered every recipes page.
+- `bun run ui:add` added select, textarea, checkbox and alert-dialog without touching
+  `button.tsx`.
